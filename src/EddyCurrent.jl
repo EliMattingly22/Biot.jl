@@ -67,9 +67,9 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
     CircOutput_Key[1+N_in+N:end] .= "Current in Wire"
     
 
-    GMat_allFreq = Complex.(zeros(2*N+N_in,2*N+N_in,N_f))
-    CircOutputs_allFreq = Complex.(zeros(2*N+N_in,N_f))
-    CircInputs_allFreq = Complex.(zeros(2*N+N_in,N_f))
+    GMat_allFreq = Complex.(zeros(2*N+(2*N_in),2*N+(2*N_in),N_f))
+    CircOutputs_allFreq = Complex.(zeros(2*N+2*N_in,N_f))
+    CircInputs_allFreq = Complex.(zeros(2*N+2*N_in))
     CircOutputs = []
     CircInputs = []
     
@@ -87,11 +87,11 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
             end
         end
         
-        GMat = Complex.(zeros(2*N+N_in,2*N+N_in))
+        GMat = Complex.(zeros(2*N+(2*N_in),2*N+(2*N_in)))
         GMat[1+N_in:N+N_in,1+N_in:N+N_in] = WireConductance
-        GMat[(N_in+N+1):end,(N_in+N+1:end)] = -1 .* LMat .* 2 .*pi .* freq .* 1im
-        GMat[1+N_in:N+N_in,N+1+N_in:end] = eye
-        GMat[N+N_in+1:end,1+N_in:N+N_in] = eye
+        GMat[(2*N_in+N+1):end,(2*N_in+N+1:end)] = -1 .* LMat .* 2 .*pi .* freq .* 1im
+        GMat[(N_in+1):(N+N_in),(N+2*N_in+1:end)] = eye
+        GMat[(N+2*N_in+1:end),(N_in+1:N+N_in)] = eye
         for kk in 1:N_in
             I = Int(InputInds[kk]) #Current loop index
             
@@ -99,12 +99,20 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
             GMat[(N_in+I),(N_in+I)] = WireConductance[I,I]
             GMat[kk,(N_in+I)] = -1* WireConductance[I,I]
             GMat[(N_in+I),kk] = -1* WireConductance[I,I]
-            # GMat[N_in+I,N_in+I] = 0
+
+            if kk>1
+                # println(kk)
+                GMat[(N+N_in+kk),Int(InputInds[kk-1])] = -1
+                GMat[(N+N_in+kk),(N+N_in+kk-1)] = 1
+                GMat[(N+N_in+kk-1),(N+N_in+kk)] = 1
+                GMat[(N+N_in+kk-1),N+2*N_in+I] = -1
+                # GMat[Int(InputInds[kk]),(N+N_in+kk)] = -1
+            end
         end
-        CapAdmittance = 2π*freq*NodeNodeCap*1im 
-        GMat[1:(N_in+N),1:(N_in+N)] .+= CapAdmittance
+        # CapAdmittance = 2π*freq*NodeNodeCap*1im 
+        # GMat[1:(N_in+N),1:(N_in+N)] .+= CapAdmittance
         GMat_allFreq[:,:,ff] = GMat
-        CircInputs = Complex.(zeros(2*N+N_in,1))
+        CircInputs = Complex.(zeros(2*N+2*N_in,1))
         CircInputs[1:N_in] = CurrentInputList[InputInds]
         # println(CircInputs[:])
         CircOutputs = pinv(GMat)*CircInputs[:]
