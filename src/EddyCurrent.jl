@@ -43,16 +43,16 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = nothi
     WireLength = zeros(N)
     eye = zeros(N,N)
     for jj in 1:N
-    PP = vcat(PP_All[jj],PP_All[jj][1,:]')
-    dL = ([VecDist(PP[I-1:I,:]) for I in 2:length(PP[:,1])])
-    if OpenTurns[jj]==0 #if the turn is not left open
-        WireLength[jj] =  sum([sqrt(dL[ii][1]^2+dL[ii][2]^2+dL[ii][3]^2) for ii in 1:length(dL)])
-        WireConductance[jj,jj] = 1 / (WireLength[jj]*ρ_Cu/WireArea)
-       
-    else
-        WireConductance[jj,jj] = 0. #if the turn is open, it does not conduct.
-    end
-    eye[jj,jj] = 1
+        PP = vcat(PP_All[jj],PP_All[jj][1,:]')
+        dL = ([VecDist(PP[I-1:I,:]) for I in 2:length(PP[:,1])])
+        if OpenTurns[jj]==0 #if the turn is not left open
+            WireLength[jj] =  sum([sqrt(dL[ii][1]^2+dL[ii][2]^2+dL[ii][3]^2) for ii in 1:length(dL)])
+            WireConductance[jj,jj] = 1 / (WireLength[jj]*ρ_Cu/WireArea)
+        
+        else
+            WireConductance[jj,jj] = 0. #if the turn is open, it does not conduct.
+        end
+        eye[jj,jj] = 1
     end
     N_f = length(f)
     
@@ -73,9 +73,9 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = nothi
     CircOutputs = []
     CircInputs = []
     if TestPoints!==nothing
-    Φ = Complex.(zeros(length(TestPoints[:,1]),3,N_f))
+            Φ = Complex.(zeros(length(TestPoints[:,1]),3,N_f))
     else
-        Φ=nothing
+            Φ=nothing
     end
     for ff in 1:N_f
         freq = f[ff]
@@ -114,11 +114,20 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = nothi
                 # GMat[Int(InputInds[kk]),(N+N_in+kk)] = -1
             end
         end
-        CapAdmittance = -1*2π*freq*NodeNodeCap*1im .* (ones(N,N).-eye)
-        CapAdmittance += 2π*freq*NodeNodeCap*1im .* eye
+            
+            CapAdmittance = Complex.(zeros(2*N+(2*N_in),2*N+(2*N_in)))
+            for ii in InputInds, jj in findall(RxInds)
+                    CapAdmittance[ii,ii] = 2π*freq*NodeNodeCap*1im
+                    CapAdmittance[jj,jj] = 2π*freq*NodeNodeCap*1im
+                    CapAdmittance[ii,jj] = -2π*freq*NodeNodeCap*1im
+                    CapAdmittance[jj,ii] = -2π*freq*NodeNodeCap*1im
+            end
+        # CapAdmittance = -1*2π*freq*NodeNodeCap*1im .* (ones(N,N).-eye)
+        # CapAdmittance += 2π*freq*NodeNodeCap*1im .* eye
         # println(CapAdmittance)
         
-        GMat[(N_in+1):(N_in+N),(N_in+1):(N_in+N)] += CapAdmittance
+        # GMat[(N_in+1):(N_in+N),(N_in+1):(N_in+N)] += CapAdmittance
+        GMat += CapAdmittance
         GMat_allFreq[:,:,ff] = GMat
         CircInputs = Complex.(zeros(2*N+2*N_in,1))
         CircInputs[1:N_in] = CurrentInputList[InputInds]
@@ -135,32 +144,32 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = nothi
         Wires = vcat(PP_All...)
         #BiotSav(PointPath,dL,r,L) is the fast version
         if TestPoints!==nothing
-        for jj in 1:N
-            PP = vcat(PP_All[jj],PP_All[jj][1,:]')
-            dL = ([VecDist(PP[I-1:I,:]) for I in 2:length(PP[:,1])])
-            # WireResist[jj] = sum([sqrt(dL[ii][1]^2+dL[ii][2]^2+dL[ii][3]^2) for ii in 1:length(dL)])*ρ_Cu/WireArea
-            PP_RS = ([PP[I,:] for I in 1:length(PP[:,1])])
-            L = length(PP_RS[:,1])    
-            for i in 1:length(TestPoints[:,1]) 
-            minDist = minimum(sqrt.(sum((Wires .- repeat(transpose(TestPoints[i,:]),length(Wires[:,1]),1)).^2,dims=2)))
-                if minDist>= (5*WireRadius)
-                    Φ[i,:,ff] .+=   (BiotSav(PP_RS,dL, TestPoints[i,:],L) .* CircOutputs[N_in+N+jj])[:] 
-                else
-                    println("Point too close to a wire")
+            for jj in 1:N
+                PP = vcat(PP_All[jj],PP_All[jj][1,:]')
+                dL = ([VecDist(PP[I-1:I,:]) for I in 2:length(PP[:,1])])
+                # WireResist[jj] = sum([sqrt(dL[ii][1]^2+dL[ii][2]^2+dL[ii][3]^2) for ii in 1:length(dL)])*ρ_Cu/WireArea
+                PP_RS = ([PP[I,:] for I in 1:length(PP[:,1])])
+                L = length(PP_RS[:,1])    
+                for i in 1:length(TestPoints[:,1]) 
+                minDist = minimum(sqrt.(sum((Wires .- repeat(transpose(TestPoints[i,:]),length(Wires[:,1]),1)).^2,dims=2)))
+                    if minDist>= (5*WireRadius)
+                        Φ[i,:,ff] .+=   (BiotSav(PP_RS,dL, TestPoints[i,:],L) .* CircOutputs[N_in+N+jj])[:] 
+                    else
+                        println("Point too close to a wire")
+                    end
                 end
             end
-        end
-        ΦMag = [real.(sqrt(sum(Φ[ii,:,ff].^2))) for ii in 1:length(Φ[:,1,ff])]
+            ΦMag = [real.(sqrt(sum(Φ[ii,:,ff].^2))) for ii in 1:length(Φ[:,1,ff])]
 
         
-        MeanMag = sum(ΦMag)/length(ΦMag)
-        ΦMag[ΦMag.>(3*MeanMag)].=3*MeanMag
-        if PlotOn
-            pygui(true)
-            plot(TestPoints[:,1],(ΦMag),TestPoints[:,2],(ΦMag),TestPoints[:,3],(ΦMag))
-            # plot(Wires[1:100:end,1],Wires[1:100:end,2],"r*")
+            MeanMag = sum(ΦMag)/length(ΦMag)
+            ΦMag[ΦMag.>(3*MeanMag)].=3*MeanMag
+            if PlotOn
+                pygui(true)
+                plot(TestPoints[:,1],(ΦMag),TestPoints[:,2],(ΦMag),TestPoints[:,3],(ΦMag))
+                # plot(Wires[1:100:end,1],Wires[1:100:end,2],"r*")
+            end
         end
-    end
 
     end
     
