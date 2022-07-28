@@ -9,7 +9,7 @@ The function evaluates the equivalent circuit (eddy currents, voltages, etc) in 
 
 
 """
-function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 0],OpenTurns = zeros(length(PP_All)); DownSampleFac=1,PlotOn=false,NPtsPath=100,NLayers=20,WireRadius=0.001,Quasistatic=true,NodeNodeCap = 1e-15)
+function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = nothing,OpenTurns = zeros(length(PP_All)); DownSampleFac=1,PlotOn=false,NPtsPath=100,NLayers=20,WireRadius=0.001,Quasistatic=true,NodeNodeCap = 1e-15)
     ρ_Cu = 1.72e-8
     WireArea = pi*WireRadius^2
     N = length(PP_All)
@@ -58,22 +58,25 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
     
     N_in = sum(CurrentInputList.!=0)
     InputInds = findall((CurrentInputList.!=0)[:])
-    CircOutput_Key =Array{String}(undef,(2*N+N_in))
-    RxInds = [zeros(N_in)...,OpenTurns...,zeros(N)...].==1
-    NotRxInds = [zeros(N_in)...,(OpenTurns.==0)...,zeros(N)...].==1
+    CircOutput_Key =Array{String}(undef,(2*N+2*N_in))
+    RxInds = [zeros(N_in)...,OpenTurns...,zeros(N_in)...,zeros(N)...].==1
+    NotRxInds = [zeros(N_in)...,(OpenTurns.==0)...,zeros(N_in)...,zeros(N)...].==1
     CircOutput_Key[1:N_in] .= "Voltage on Current Source"
     CircOutput_Key[RxInds] .= "Voltage on Rx"
     CircOutput_Key[NotRxInds] .= "Voltage on Current-Carrying Wire"
-    CircOutput_Key[1+N_in+N:end] .= "Current in Wire"
+    CircOutput_Key[1+2*N_in+N:end] .= "Current in Wire"
     
 
     GMat_allFreq = Complex.(zeros(2*N+(2*N_in),2*N+(2*N_in),N_f))
     CircOutputs_allFreq = Complex.(zeros(2*N+2*N_in,N_f))
-    CircInputs_allFreq = Complex.(zeros(2*N+2*N_in))
+    CircInputs_allFreq = Complex.(zeros(2*N+2*N_in,N_f))
     CircOutputs = []
     CircInputs = []
-    
+    if TestPoints!==nothing
     Φ = Complex.(zeros(length(TestPoints[:,1]),3,N_f))
+    else
+        Φ=nothing
+    end
     for ff in 1:N_f
         freq = f[ff]
         λ = 3e8/freq
@@ -106,11 +109,16 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
                 GMat[(N+N_in+kk),(N+N_in+kk-1)] = 1
                 GMat[(N+N_in+kk-1),(N+N_in+kk)] = 1
                 GMat[(N+N_in+kk-1),N+2*N_in+I] = -1
+                GMat[(N+2*N_in+kk),(N+N_in+kk-1)] = -1
+                GMat[(N+N_in+kk-1),(N+2*N_in+kk)] = -1
                 # GMat[Int(InputInds[kk]),(N+N_in+kk)] = -1
             end
         end
-        # CapAdmittance = 2π*freq*NodeNodeCap*1im 
-        # GMat[1:(N_in+N),1:(N_in+N)] .+= CapAdmittance
+        CapAdmittance = -1*2π*freq*NodeNodeCap*1im .* (ones(N,N).-eye)
+        CapAdmittance += 2π*freq*NodeNodeCap*1im .* eye
+        # println(CapAdmittance)
+        
+        GMat[(N_in+1):(N_in+N),(N_in+1):(N_in+N)] += CapAdmittance
         GMat_allFreq[:,:,ff] = GMat
         CircInputs = Complex.(zeros(2*N+2*N_in,1))
         CircInputs[1:N_in] = CurrentInputList[InputInds]
@@ -126,6 +134,7 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
         
         Wires = vcat(PP_All...)
         #BiotSav(PointPath,dL,r,L) is the fast version
+        if TestPoints!==nothing
         for jj in 1:N
             PP = vcat(PP_All[jj],PP_All[jj][1,:]')
             dL = ([VecDist(PP[I-1:I,:]) for I in 2:length(PP[:,1])])
@@ -142,6 +151,7 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
             end
         end
         ΦMag = [real.(sqrt(sum(Φ[ii,:,ff].^2))) for ii in 1:length(Φ[:,1,ff])]
+
         
         MeanMag = sum(ΦMag)/length(ΦMag)
         ΦMag[ΦMag.>(3*MeanMag)].=3*MeanMag
@@ -150,6 +160,8 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
             plot(TestPoints[:,1],(ΦMag),TestPoints[:,2],(ΦMag),TestPoints[:,3],(ΦMag))
             # plot(Wires[1:100:end,1],Wires[1:100:end,2],"r*")
         end
+    end
+
     end
     
 
