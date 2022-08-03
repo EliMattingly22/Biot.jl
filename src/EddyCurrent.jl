@@ -107,7 +107,7 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = nothi
                 # println(kk)
                 GMat[(N+N_in+kk),Int(InputInds[kk-1])] = -1
                 GMat[(N+N_in+kk),(N+N_in+kk-1)] = 1
-                GMat[(N+N_in+kk-1),(N+N_in+kk)] = 1
+                # GMat[(N+N_in+kk-1),(N+N_in+kk)] = 1
                 GMat[(N+N_in+kk-1),N+2*N_in+I] = -1
                 GMat[(N+2*N_in+kk),(N+N_in+kk-1)] = -1
                 GMat[(N+N_in+kk-1),(N+2*N_in+kk)] = -1
@@ -135,6 +135,7 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = nothi
         Wires = vcat(PP_All...)
         #BiotSav(PointPath,dL,r,L) is the fast version
         if TestPoints!==nothing
+<<<<<<< Updated upstream
         for jj in 1:N
             PP = vcat(PP_All[jj],PP_All[jj][1,:]')
             dL = ([VecDist(PP[I-1:I,:]) for I in 2:length(PP[:,1])])
@@ -147,6 +148,21 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = nothi
                     Φ[i,:,ff] .+=   (BiotSav(PP_RS,dL, TestPoints[i,:],L) .* CircOutputs[N_in+N+jj])[:] 
                 else
                     println("Point too close to a wire")
+=======
+            for jj in 1:N
+                PP = vcat(PP_All[jj],PP_All[jj][1,:]')
+                dL = ([VecDist(PP[I-1:I,:]) for I in 2:length(PP[:,1])])
+                # WireResist[jj] = sum([sqrt(dL[ii][1]^2+dL[ii][2]^2+dL[ii][3]^2) for ii in 1:length(dL)])*ρ_Cu/WireArea
+                PP_RS = ([PP[I,:] for I in 1:length(PP[:,1])])
+                L = length(PP_RS[:,1])    
+                for i in 1:length(TestPoints[:,1]) 
+                # minDist = minimum(sqrt.(sum((Wires .- repeat(transpose(TestPoints[i,:]),length(Wires[:,1]),1)).^2,dims=2)))
+                    # if minDist>= (5*WireRadius)
+                        Φ[i,:,ff] .+=   (BiotSav(PP_RS,dL, TestPoints[i,:],L) .* CircOutputs[N_in+N+jj])[:] 
+                    # else
+                        # println("Point too close to a wire")
+                    # end
+>>>>>>> Stashed changes
                 end
             end
         end
