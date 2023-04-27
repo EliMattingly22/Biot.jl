@@ -204,8 +204,9 @@ function MakeRectPointPath(Coords;NElement = 50, PlotOn=false)
         UpSampz = LinRange(zVec[i],zVec[i+1],NElement)[:]
         zVecUp = vcat(zVecUp,UpSampz,Coords[i+1,3])
     end
-    PointPath = hcat(xVecUp,yVecUp,zVecUp)
+    PointPath = unique(hcat(xVecUp,yVecUp,zVecUp);dims=1)
     if PlotOn
+        pygui(true)
         scatter3D(xVecUp,yVecUp,zVecUp)
     end
     return PointPath
