@@ -15,7 +15,7 @@ function eval_LMat_PP_List(PP_All; DownSampleFac=1,PlotOn=false,NPtsPath=100,NLa
     Mut = 0.
     Self = 0.
     PP_All, NewIndexes = SortPPByArea(PP_All;MeasLayers=NLayers,WireRad = WireRadius)
-
+    println("Sorted")
 
     Mut, Self, SavedBSelfArr = Mutual_L_TwoLoops(PP_All[end], PP_All[1];DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius,IncludeWireInduct=false,SaveΦ₁=true)
 
@@ -34,6 +34,10 @@ function eval_LMat_PP_List(PP_All; DownSampleFac=1,PlotOn=false,NPtsPath=100,NLa
         LMat[j,k] = Mut
         LMat[k,j] = Mut
     end
+
+    
+
+
     return LMat,NewIndexes
 end
 

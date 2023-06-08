@@ -1,15 +1,12 @@
 """
 The function evaluates the equivalent circuit (eddy currents, voltages, etc) in a system of coupled PointPaths.
-
     The inputs are:
     PP_All which is an array of Nx3 matrices. Each of which are separate (magnetically coupled) loops of wire.
     CurrentInputList is a array of length(PP_All) is is the input currents to the system. So loops of wire you want to investigate the current in should be set to zero.
     f is the test frequency
     TestPoints is an Mx3 matrix to evaluate the field at
-
-
 """
-function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = nothing,OpenTurns = zeros(length(PP_All)); DownSampleFac=1,PlotOn=false,NPtsPath=100,NLayers=20,WireRadius=0.001,Quasistatic=true,NodeNodeCap = 1e-15)
+function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 0],OpenTurns = zeros(length(PP_All)); DownSampleFac=1,PlotOn=false,NPtsPath=100,NLayers=20,WireRadius=0.001,Quasistatic=true,NodeNodeCap = 1e-15)
     ρ_Cu = 1.72e-8
     WireArea = pi*WireRadius^2
     N = length(PP_All)
@@ -18,8 +15,8 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = nothi
     Mut = 0.
     Self = 0.
     CurrentInputList = CurrentInputList[:]
-    
- 
+
+
     Mut, Self, SavedBSelfArr = Mutual_L_TwoLoops(PP_All[end], PP_All[1];DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius,IncludeWireInduct=true,SaveΦ₁=true)
 
 
@@ -37,46 +34,43 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = nothi
         LMat[j,k] = Mut
         LMat[k,j] = Mut
     end
-    
+
 
     WireConductance = zeros(N,N)
     WireLength = zeros(N)
     eye = zeros(N,N)
     for jj in 1:N
-        PP = vcat(PP_All[jj],PP_All[jj][1,:]')
-        dL = ([VecDist(PP[I-1:I,:]) for I in 2:length(PP[:,1])])
-        if OpenTurns[jj]==0 #if the turn is not left open
-            WireLength[jj] =  sum([sqrt(dL[ii][1]^2+dL[ii][2]^2+dL[ii][3]^2) for ii in 1:length(dL)])
-            WireConductance[jj,jj] = 1 / (WireLength[jj]*ρ_Cu/WireArea)
-        
-        else
-            WireConductance[jj,jj] = 0. #if the turn is open, it does not conduct.
-        end
-        eye[jj,jj] = 1
+    PP = vcat(PP_All[jj],PP_All[jj][1,:]')
+    dL = ([VecDist(PP[I-1:I,:]) for I in 2:length(PP[:,1])])
+    if OpenTurns[jj]==0 #if the turn is not left open
+        WireLength[jj] =  sum([sqrt(dL[ii][1]^2+dL[ii][2]^2+dL[ii][3]^2) for ii in 1:length(dL)])
+        WireConductance[jj,jj] = 1 / (WireLength[jj]*ρ_Cu/WireArea)
+
+    else
+        WireConductance[jj,jj] = 0. #if the turn is open, it does not conduct.
+    end
+    eye[jj,jj] = 1
     end
     N_f = length(f)
-    
+
     N_in = sum(CurrentInputList.!=0)
     InputInds = findall((CurrentInputList.!=0)[:])
-    CircOutput_Key =Array{String}(undef,(2*N+2*N_in))
-    RxInds = [zeros(N_in)...,OpenTurns...,zeros(N_in)...,zeros(N)...].==1
-    NotRxInds = [zeros(N_in)...,(OpenTurns.==0)...,zeros(N_in)...,zeros(N)...].==1
+    CircOutput_Key =Array{String}(undef,(2*N+N_in))
+    RxInds = [zeros(N_in)...,OpenTurns...,zeros(N)...].==1
+    NotRxInds = [zeros(N_in)...,(OpenTurns.==0)...,zeros(N)...].==1
     CircOutput_Key[1:N_in] .= "Voltage on Current Source"
     CircOutput_Key[RxInds] .= "Voltage on Rx"
     CircOutput_Key[NotRxInds] .= "Voltage on Current-Carrying Wire"
-    CircOutput_Key[1+2*N_in+N:end] .= "Current in Wire"
-    
+    CircOutput_Key[1+N_in+N:end] .= "Current in Wire"
 
-    GMat_allFreq = Complex.(zeros(2*N+(2*N_in),2*N+(2*N_in),N_f))
-    CircOutputs_allFreq = Complex.(zeros(2*N+2*N_in,N_f))
-    CircInputs_allFreq = Complex.(zeros(2*N+2*N_in,N_f))
+
+    GMat_allFreq = Complex.(zeros(2*N+N_in,2*N+N_in,N_f))
+    CircOutputs_allFreq = Complex.(zeros(2*N+N_in,N_f))
+    CircInputs_allFreq = Complex.(zeros(2*N+N_in,N_f))
     CircOutputs = []
     CircInputs = []
-    if TestPoints!==nothing
-            Φ = Complex.(zeros(length(TestPoints[:,1]),3,N_f))
-    else
-            Φ=nothing
-    end
+
+    Φ = Complex.(zeros(length(TestPoints[:,1]),3,N_f))
     for ff in 1:N_f
         freq = f[ff]
         λ = 3e8/freq
@@ -85,94 +79,68 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = nothi
             CurrentInputList = Complex.(CurrentInputList)
             for ii in 1:N_in
                 TotalLength+=WireLength[InputInds[ii]]
-                
+
                 CurrentInputList[InputInds[ii]] *=exp(TotalLength/λ*2π*1im) 
             end
         end
-        
-        GMat = Complex.(zeros(2*N+(2*N_in),2*N+(2*N_in)))
+
+        GMat = Complex.(zeros(2*N+N_in,2*N+N_in))
         GMat[1+N_in:N+N_in,1+N_in:N+N_in] = WireConductance
-        GMat[(2*N_in+N+1):end,(2*N_in+N+1:end)] = -1 .* LMat .* 2 .*pi .* freq .* 1im
-        GMat[(N_in+1):(N+N_in),(N+2*N_in+1:end)] = eye
-        GMat[(N+2*N_in+1:end),(N_in+1:N+N_in)] = eye
+        GMat[(N_in+N+1):end,(N_in+N+1:end)] = -1 .* LMat .* 2 .*pi .* freq .* 1im
+        GMat[1+N_in:N+N_in,N+1+N_in:end] =-1 .* eye#### Changed sign -June 6
+        GMat[N+N_in+1:end,1+N_in:N+N_in] =-1 .* eye #### Changed sign -June 6
         for kk in 1:N_in
             I = Int(InputInds[kk]) #Current loop index
-            
+
             GMat[kk,kk] = WireConductance[I,I]
             GMat[(N_in+I),(N_in+I)] = WireConductance[I,I]
             GMat[kk,(N_in+I)] = -1* WireConductance[I,I]
             GMat[(N_in+I),kk] = -1* WireConductance[I,I]
-
-            if kk>1
-                # println(kk)
-                GMat[(N+N_in+kk),Int(InputInds[kk-1])] = -1
-                GMat[(N+N_in+kk),(N+N_in+kk-1)] = 1
-                GMat[(N+N_in+kk-1),(N+N_in+kk)] = 1
-                GMat[(N+N_in+kk-1),N+2*N_in+I] = -1
-                GMat[(N+2*N_in+kk),(N+N_in+kk-1)] = -1
-                GMat[(N+N_in+kk-1),(N+2*N_in+kk)] = -1
-                # GMat[Int(InputInds[kk]),(N+N_in+kk)] = -1
-            end
+            # GMat[N_in+I,N_in+I] = 0
         end
-            
-            CapAdmittance = Complex.(zeros(2*N+(2*N_in),2*N+(2*N_in)))
-            for ii in InputInds, jj in findall(RxInds)
-                    CapAdmittance[ii,ii] = 2π*freq*NodeNodeCap*1im
-                    CapAdmittance[jj,jj] = 2π*freq*NodeNodeCap*1im
-                    CapAdmittance[ii,jj] = -2π*freq*NodeNodeCap*1im
-                    CapAdmittance[jj,ii] = -2π*freq*NodeNodeCap*1im
-            end
-        # CapAdmittance = -1*2π*freq*NodeNodeCap*1im .* (ones(N,N).-eye)
-        # CapAdmittance += 2π*freq*NodeNodeCap*1im .* eye
-        # println(CapAdmittance)
-        
-        # GMat[(N_in+1):(N_in+N),(N_in+1):(N_in+N)] += CapAdmittance
-        GMat += CapAdmittance
+        CapAdmittance = 2π*freq*NodeNodeCap*1im 
+        # GMat[1:(N_in+N),1:(N_in+N)] .+= CapAdmittance
         GMat_allFreq[:,:,ff] = GMat
-        CircInputs = Complex.(zeros(2*N+2*N_in,1))
+        CircInputs = Complex.(zeros(2*N+N_in,1))
         CircInputs[1:N_in] = CurrentInputList[InputInds]
         # println(CircInputs[:])
         CircOutputs = pinv(GMat)*CircInputs[:]
         CircOutputs_allFreq[:,ff] = CircOutputs
         CircInputs_allFreq[:,ff] = CircInputs
-        
+
         # println(sum(CircOutputs[RxInds]))
         # println(abs(CircOutputs[findfirst(RxInds)])/abs(sum(CircOutputs[RxInds])))
         # display(imshow(real.(GMat)))
         # println(size(GMat))
-        
+
         Wires = vcat(PP_All...)
         #BiotSav(PointPath,dL,r,L) is the fast version
-        if TestPoints!==nothing
-            for jj in 1:N
-                PP = vcat(PP_All[jj],PP_All[jj][1,:]')
-                dL = ([VecDist(PP[I-1:I,:]) for I in 2:length(PP[:,1])])
-                # WireResist[jj] = sum([sqrt(dL[ii][1]^2+dL[ii][2]^2+dL[ii][3]^2) for ii in 1:length(dL)])*ρ_Cu/WireArea
-                PP_RS = ([PP[I,:] for I in 1:length(PP[:,1])])
-                L = length(PP_RS[:,1])    
-                for i in 1:length(TestPoints[:,1]) 
-                minDist = minimum(sqrt.(sum((Wires .- repeat(transpose(TestPoints[i,:]),length(Wires[:,1]),1)).^2,dims=2)))
-                    if minDist>= (5*WireRadius)
-                        Φ[i,:,ff] .+=   (BiotSav(PP_RS,dL, TestPoints[i,:],L) .* CircOutputs[N_in+N+jj])[:] 
-                    else
-                        println("Point too close to a wire")
-                    end
+        for jj in 1:N
+            PP = vcat(PP_All[jj],PP_All[jj][1,:]')
+            dL = ([VecDist(PP[I-1:I,:]) for I in 2:length(PP[:,1])])
+            # WireResist[jj] = sum([sqrt(dL[ii][1]^2+dL[ii][2]^2+dL[ii][3]^2) for ii in 1:length(dL)])*ρ_Cu/WireArea
+            PP_RS = ([PP[I,:] for I in 1:length(PP[:,1])])
+            L = length(PP_RS[:,1])    
+            for i in 1:length(TestPoints[:,1]) 
+            minDist = minimum(sqrt.(sum((Wires .- repeat(transpose(TestPoints[i,:]),length(Wires[:,1]),1)).^2,dims=2)))
+                if minDist>= (5*WireRadius)
+                    Φ[i,:,ff] .+=   (BiotSav(PP_RS,dL, TestPoints[i,:],L) .* CircOutputs[N_in+N+jj])[:] 
+                else
+                    println("Point too close to a wire")
                 end
             end
-            ΦMag = [real.(sqrt(sum(Φ[ii,:,ff].^2))) for ii in 1:length(Φ[:,1,ff])]
-
-        
-            MeanMag = sum(ΦMag)/length(ΦMag)
-            ΦMag[ΦMag.>(3*MeanMag)].=3*MeanMag
-            if PlotOn
-                pygui(true)
-                plot(TestPoints[:,1],(ΦMag),TestPoints[:,2],(ΦMag),TestPoints[:,3],(ΦMag))
-                # plot(Wires[1:100:end,1],Wires[1:100:end,2],"r*")
-            end
         end
+        ΦMag = [real.(sqrt(sum(Φ[ii,:,ff].^2))) for ii in 1:length(Φ[:,1,ff])]
 
+        MeanMag = sum(ΦMag)/length(ΦMag)
+        ΦMag[ΦMag.>(3*MeanMag)].=3*MeanMag
+        if PlotOn
+            pygui(true)
+            plot(TestPoints[:,1],(ΦMag),TestPoints[:,2],(ΦMag),TestPoints[:,3],(ΦMag))
+            # plot(Wires[1:100:end,1],Wires[1:100:end,2],"r*")
+        end
     end
-    
+
 
     return LMat, GMat_allFreq, CircOutputs_allFreq, CircInputs_allFreq, CircOutput_Key,RxInds,Φ
 
@@ -188,7 +156,7 @@ end
 # GMat[N+N_in+1:end,1+N_in:N+N_in] = eye
 # for kk in 1:N_in
 #     I = Int(InputInds[kk]) #Current loop index
-    
+
 #     GMat[kk,kk] = WireConductance[I,I]
 #     GMat[(N_in+I),(N_in+I)] = WireConductance[I,I]
 #     GMat[kk,(N_in+I)] = -1* WireConductance[I,I]
