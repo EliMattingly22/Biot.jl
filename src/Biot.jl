@@ -2,7 +2,7 @@ module Biot
 
 using LinearAlgebra, PyPlot, Interpolations
 
-
+μ₀ = 4*pi*1e-7
 
 
 include("FieldCalc.jl")

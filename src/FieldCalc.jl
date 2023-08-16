@@ -91,6 +91,7 @@ Simple analytical formula for the field on axis of a Circle
 
 """
 function FieldOnAxis_Circ(R,z;I=1)
+    μ₀ = 4*pi*1e-7
     Bz = μ₀*2*pi*R^2*I ./ (4*π* (z^2 + R^2)^(3/2))
 end
 
