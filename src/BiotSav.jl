@@ -12,7 +12,7 @@ This function takes in:
             The function tends to inf near wires
 
 """
-function BiotSav(PointPath,r;Current=1 ,MinThreshold = 0.01)
+function BiotSav(PointPath,r;Current=1 ,MinThreshold = 0.001)
     
     PointPath = vcat(PointPath,PointPath[1,:]')
     NPts = length(PointPath[:,1])

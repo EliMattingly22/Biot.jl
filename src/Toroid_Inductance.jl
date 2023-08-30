@@ -249,7 +249,7 @@ end
 
 """
 This builds a rotation matrix, to rotate around the z axis
-Radians input.
+Deg input.
 """
 function BuildRotMatrix_deg_Z(Θ)
     Θ = Θ * π / 180
@@ -259,7 +259,7 @@ function BuildRotMatrix_deg_Z(Θ)
 end
 """
 This builds a rotation matrix, to rotate around the Y axis
-Radians input.
+Deg input.
 """
 function BuildRotMatrix_deg_Y(Θ)
     Θ = Θ * π / 180
