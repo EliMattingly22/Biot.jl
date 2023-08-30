@@ -5,6 +5,8 @@ The function evaluates the equivalent circuit (eddy currents, voltages, etc) in 
     CurrentInputList is a array of length(PP_All) is is the input currents to the system. So loops of wire you want to investigate the current in should be set to zero.
     f is the test frequency
     TestPoints is an Mx3 matrix to evaluate the field at
+
+    Outputs: LMat, GMat_allFreq, CircOutputs_allFreq, CircInputs_allFreq, CircOutput_Key,RxInds,Φ
 """
 function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 0],OpenTurns = zeros(length(PP_All)); DownSampleFac=1,PlotOn=false,NPtsPath=100,NLayers=20,WireRadius=0.001,Quasistatic=true,NodeNodeCap = 1e-15)
     ρ_Cu = 1.72e-8
