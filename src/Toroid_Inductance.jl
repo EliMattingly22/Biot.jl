@@ -126,7 +126,7 @@ This function takes in the following (required) variables:
     SelfInductScaleFactor is, as the name implies, a small ``fudge factor'' if you want to artificially scale up the self-inductance. This may be useful if there is a known offset to account for. 
 
 """
-function eval_Induct_DToroidTransformer(IRad, ORad, N₁::Int, N₂::Int;DownSampleFac=1,PlotOn=false,NPtsPath=100,NLayers=20,SelfInductScaleFactor=1,UseAnalyticalSelfL=false)
+function eval_Induct_DToroidTransformer(IRad, ORad, N₁::Int, N₂::Int;DownSampleFac=1,PlotOn=false,NPtsPath=100,NLayers=20,SelfInductScaleFactor=1)
     if PlotOn
         pygui(true)
         gcf()
@@ -176,11 +176,7 @@ function eval_Induct_DToroidTransformer(IRad, ORad, N₁::Int, N₂::Int;DownSam
     L₁₁ = LMat[Primary_Self] .* SelfInductScaleFactor
     L₂₂ = LMat[Secondary_Self] .* SelfInductScaleFactor
     LMut = LMat[MutualInduct]
-    if UseAnalyticalSelfL
-        println("Using analyical formula for self inductance. Make sure ORad/IRad is an integer")
-        L₁₁ = DCore_DetermineIdealInduct(IRad * 2, N₁, Int(round(ORad / IRad)))
-        L₂₂ = DCore_DetermineIdealInduct(IRad * 2, N₂, Int(round(ORad / IRad)))
-    end
+
     Lμ = sum(LMut) * N₁ / N₂ / 2 # THe division by 2 is due to the double-counting of M in a symmetric matrix
     LLeak1 = sum(L₁₁) - Lμ
     LLeak2 = sum(L₂₂) - Lμ * (N₂ / N₁)^2
@@ -201,10 +197,10 @@ end
 function eval_Induct_DToroid_SplitWindings(IRad, ORad, N₁Half::Int)
 
     figure()
-    LMat, NIndexingArray, L₁₁, L₂₂, LMut, Lμ, LLeak1, LLeak2, K = CircModDesign.eval_Induct_DToroidTransformer(IRad,ORad,N₁Half,N₁Half;
+    LMat, NIndexingArray, L₁₁, L₂₂, LMut, Lμ, LLeak1, LLeak2, K = eval_Induct_DToroidTransformer(IRad,ORad,N₁Half,N₁Half;
     DownSampleFac=10,
     PlotOn=true,NLayers=45)
-    Primary_Self, Secondary_Self, MutualInduct = CircModDesign.LMatMutualIndexing(N₁Half * 2, NIndexingArray[:,2])
+    Primary_Self, Secondary_Self, MutualInduct = LMatMutualIndexing(N₁Half * 2, NIndexingArray[:,2])
     xlabel("X, meters")
     ylabel("Y, meters")
     zlabel("Z, meters")
@@ -215,16 +211,16 @@ function eval_Induct_DToroid_SplitWindings(IRad, ORad, N₁Half::Int)
         
     BundleScaling = N₁Half
     figure()
-    CircModDesign.ScatterPlotToroid(IRad,ORad,Int(N₁Half),Int(N₁Half),BundleScaling)
-    Primary_Self, Secondary_Self, MutualInduct = CircModDesign.LMatMutualIndexing(N₁Half * 2, CircModDesign.makeIndexinVec(NIndexingArray[:,2], BundleScaling))
+    ScatterPlotToroid(IRad,ORad,Int(N₁Half),Int(N₁Half),BundleScaling)
+    Primary_Self, Secondary_Self, MutualInduct = LMatMutualIndexing(N₁Half * 2, makeIndexinVec(NIndexingArray[:,2], BundleScaling))
     xlabel("X, meters")
     ylabel("Y, meters")
     zlabel("Z, meters")
     xlim([-1.1 * ORad, 1.1 * ORad])
     zlim([-1.1 * ORad, 1.1 * ORad])
     ylim([-1.1 * ORad, 1.1 * ORad])
-    yticks([])
-    ylabel("")
+    # yticks([])
+    # ylabel("")
     L₁₁ = LMat[Primary_Self] 
     L₂₂ = LMat[Secondary_Self] 
     LMut = LMat[MutualInduct]

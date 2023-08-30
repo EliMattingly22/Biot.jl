@@ -58,7 +58,7 @@ function BiotSav(PointPath::Matrix,dL,r::Vector,L::Int;MinThreshold=1e-5)
     
     MeanPoint = (PointPath[2:end,:] .+ PointPath[1:end-1,:])./2
     if MinThreshold !== nothing
-    minDist = minimum(sqrt.(sum((PointPath .- repeat(transpose(r[:]),L,1)).^2,dims=2)))
+    minDist = minimum(sqrt.(sum((PointPath .- repeat(transpose(r[:]),size(PointPath,1),1)).^2,dims=2)))
         if minDist>= MinThreshold
             for I in 2:L
                 # Rprime = r .- PointPath[I]
