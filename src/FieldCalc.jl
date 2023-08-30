@@ -54,9 +54,14 @@ function BiotSav(PointPath,dL,r,L)
     
     dB = [0. , 0., 0.]
     
-    
+    MeanPoint = (PointPath[2:end,:] .+ PointPath[1:end-1,:])./2
+
+
     for I in 2:L
-            Rprime = r .- PointPath[I]
+            # Rprime = r .- PointPath[I]
+            # 
+            
+            Rprime = r .- MeanPoint[I-1]
             RDist = (sum(Rprime.^2))
             dB .+= 1e-7 .*LinearAlgebra.cross(dL[I-1],(Rprime/sqrt(RDist))) ./ (RDist)
     end
