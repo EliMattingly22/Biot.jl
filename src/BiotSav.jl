@@ -51,22 +51,39 @@ end
     L is the length of PointPath
 
 """
-function BiotSav(PointPath::Matrix,dL,r::Vector,L::Int)
+function BiotSav(PointPath::Matrix,dL,r::Vector,L::Int;MinThreshold=1e-5)
     
 
     dB = [0. , 0., 0.]
     
     MeanPoint = (PointPath[2:end,:] .+ PointPath[1:end-1,:])./2
-
-
-    for I in 2:L
+    if MinThreshold !== nothing
+    minDist = minimum(sqrt.(sum((PointPath .- repeat(transpose(r[:]),L,1)).^2,dims=2)))
+        if minDist>= MinThreshold
+            for I in 2:L
+                # Rprime = r .- PointPath[I]
+                # 
+                
+                Rprime = r .- MeanPoint[I-1]
+                RDist = (sum(Rprime.^2))
+                dB .+= 1e-7 .*LinearAlgebra.cross(dL[I-1],(Rprime/sqrt(RDist))) ./ (RDist)
+            end
+        end
+    else 
+        for I in 2:L
             # Rprime = r .- PointPath[I]
             # 
             
             Rprime = r .- MeanPoint[I-1]
             RDist = (sum(Rprime.^2))
             dB .+= 1e-7 .*LinearAlgebra.cross(dL[I-1],(Rprime/sqrt(RDist))) ./ (RDist)
+        end
+        
     end
+
+    
+       
+    
     dB
 end
 
@@ -76,29 +93,45 @@ Evaluate the Biot-Savart equation at point r given the wire defined by PointPath
 Inputs: PointPath is a vector of vectors
 
 """
-function BiotSav(PointPath::Vector,dL,r::Vector,L::Int)
+function BiotSav(PointPath::Vector,dL,r::Vector,L::Int;MinThreshold=1e-5)
     
 
     dB = [0. , 0., 0.]
     
     MeanPoint = (PointPath[2:end] .+ PointPath[1:end-1])./2
 
-
-    for I in 2:L
-            # Rprime = r .- PointPath[I]
-            # 
+    
+    if MinThreshold !== nothing
+        minDist = minimum([sqrt.(sum((PointPath[i] .- r[:]).^2)) for i in 1:L])
+            if minDist>= MinThreshold
+                for I in 2:L
+                    # Rprime = r .- PointPath[I]
+                    # 
+                    
+                    Rprime = r .- MeanPoint[I-1]
+                    RDist = (sum(Rprime.^2))
+                    dB .+= 1e-7 .*LinearAlgebra.cross(dL[I-1],(Rprime/sqrt(RDist))) ./ (RDist)
+                end
+            end
+        else 
+            for I in 2:L
+                # Rprime = r .- PointPath[I]
+                # 
+                
+                Rprime = r .- MeanPoint[I-1]
+                RDist = (sum(Rprime.^2))
+                dB .+= 1e-7 .*LinearAlgebra.cross(dL[I-1],(Rprime/sqrt(RDist))) ./ (RDist)
+            end
             
-            Rprime = r .- MeanPoint[I-1]
-            RDist = (sum(Rprime.^2))
-            dB .+= 1e-7 .*LinearAlgebra.cross(dL[I-1],(Rprime/sqrt(RDist))) ./ (RDist)
-    end
+        end
+    
     dB
 end
 
-function BiotSav(PointPath,dL,r::Matrix,L::Int)
+function BiotSav(PointPath,dL,r::Matrix,L::Int;MinThreshold=1e-5)
     
 
-    BiotSav(PointPath,dL,r[:],L)
+    BiotSav(PointPath,dL,r[:],L;MinThreshold=MinThreshold)
 end
 
 function BiotSav(PointPath,r::Matrix)
