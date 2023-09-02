@@ -56,8 +56,10 @@ Coords = [1 0 0
           2 1 0
           1 1 0]
 """
-function MakeRectSaddlePointPath(Coords;NElement = 50, PlotOn=false)
-    Coords = vcat(Coords, reshape(Coords[1,:],1,3))
+function MakeRectSaddlePointPath(Coords;NElement = 50, PlotOn=false,ConnectFirstLastPoints = true)
+    if ConnectFirstLastPoints
+        Coords = vcat(Coords, reshape(Coords[1,:],1,3))
+    end
     θVec = Coords[:,1]
     rVec = Coords[:,2]
     zVec = Coords[:,3]
@@ -87,6 +89,8 @@ function MakeRectSaddlePointPath(Coords;NElement = 50, PlotOn=false)
     return PointPath
 
 end
+
+MakePolarRectPointPath = MakeRectSaddlePointPath #Simply adding another name for the function to make it easier to find
 
 
 function FieldSaddleCentered(h,D,ϕ)
