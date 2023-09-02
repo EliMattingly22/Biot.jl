@@ -13,10 +13,11 @@ include("ToroidOptimizer.jl")
 include("EddyCurrent.jl")
 include("Transformer.jl")
 include("MutualInductanceLoops.jl")
+include("SaddleCoils.jl")
 
 export  BiotSav,
 FieldMapPointPath,MakeEllipTestPoints,FieldOnAxis_Circ,MakeEllip,eval_EddyCurrent_PP_List,
-MakeEllipSolenoidPointPath,makeConcentricSolenoids,EvalField_Centered,
+MakeEllipSolenoidPointPath,makeConcentricSolenoids,EvalField_Centered,MakeRectSaddlePointPath,
 eval_Induct_DToroid,eval_Induct_CircToroid,eval_Induct_DToroidTransformer,eval_Induct_DToroid_SplitWindings,
 Mutual_L_TwoLoops,eval_LMat_PP_List,LMatMutualIndexing
 

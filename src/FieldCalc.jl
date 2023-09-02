@@ -118,43 +118,6 @@ NumLayers - number of interior test points
 
  end
 
-"""
-Makes a point path for the BiotSav function
-    Input is an Nx3 array of coordinates where it is structured as:
-    [x₁, y₁, z₁
-    ..
-    ..
-    xₙ, yₙ, zₙ]
-
-Coords = [1 0 0
-          2 0 0
-          2 1 0
-          1 1 0]
-"""
-function MakeRectPointPath(Coords;NElement = 50, PlotOn=false)
-    Coords = vcat(Coords, reshape(Coords[1,:],1,3))
-    xVec = Coords[:,1]
-    yVec = Coords[:,2]
-    zVec = Coords[:,3]
-    xVecUp = [Coords[1,1]]
-    yVecUp = [Coords[1,2]]
-    zVecUp = [Coords[1,3]]
-    for i in 1:(length(xVec)-1)
-        UpSamp = LinRange(xVec[i],xVec[i+1],NElement)[:]
-        xVecUp = vcat(xVecUp,UpSamp,Coords[i+1,1])
-        UpSampy = LinRange(yVec[i],yVec[i+1],NElement)[:]
-        yVecUp = vcat(yVecUp,UpSampy,Coords[i+1,2])
-        UpSampz = LinRange(zVec[i],zVec[i+1],NElement)[:]
-        zVecUp = vcat(zVecUp,UpSampz,Coords[i+1,3])
-    end
-    PointPath = unique(hcat(xVecUp,yVecUp,zVecUp);dims=1)
-    if PlotOn
-        pygui(true)
-        scatter3D(xVecUp,yVecUp,zVecUp)
-    end
-    return PointPath
-
-end
 
 
 function WireNearField_B(r,Wire_R;I=1)

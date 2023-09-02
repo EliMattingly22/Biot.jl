@@ -70,7 +70,7 @@ function BiotSav(PointPath::Matrix,dL,r::Vector,L::Int;MinThreshold=1e-5)
             end
         end
     else 
-        for I in 2:L
+         for I in 2:L
             # Rprime = r .- PointPath[I]
             # 
             
