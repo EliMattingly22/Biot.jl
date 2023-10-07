@@ -86,12 +86,12 @@ function Mutual_L_TwoLoops(PP₁,PP₂,PriorBSelf;DownSampleFac=1,
     PP₂ = vcat(PP₂,PP₂[1,:]')
     dL = ([VecDist(PP₂[I-1:I,:]) for I in 2:length(PP₂[:,1])])
     # PP₂_RS = ([PP₂[I,:] for I in 1:length(PP₂[:,1])])
-    L = length(dL[:,1])    
+    L = length(dL[:,1])+1    
 
     #BiotSav(PointPath,dL,r,L) is the fast version
     for i in 1:length(TestPoints[:,1]) 
         Φ₂₁ += sum(PriorBSelf[i,:] .* BiotSav(PP₂,dL, TestPoints[i,:],L) .* Weights[i] .* SliceArea ./ NPtsPerSlice) /    √(sum(PriorBSelf[i,:].^2))
-       
+        # Φ₂₁ += sum(PriorBSelf[i,:] .* BiotSav(PP₂, TestPoints[i,:]) .* Weights[i] .* SliceArea ./ NPtsPerSlice) /    √(sum(PriorBSelf[i,:].^2))
     end
 
     

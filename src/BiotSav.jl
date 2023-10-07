@@ -53,7 +53,6 @@ end
 """
 function BiotSav(PointPath::Matrix,dL,r::Vector,L::Int;MinThreshold=1e-5)
     
-
     dB = [0. , 0., 0.]
     
     MeanPoint = (PointPath[2:end,:] .+ PointPath[1:end-1,:])./2
@@ -63,20 +62,21 @@ function BiotSav(PointPath::Matrix,dL,r::Vector,L::Int;MinThreshold=1e-5)
             for I in 2:L
                 # Rprime = r .- PointPath[I]
                 # 
+                # MeanPoint = sum(PointPath[I-1:I,:],dims=1)[:] ./ 2
                 
-                Rprime = r .- MeanPoint[I-1]
+                Rprime = r .- MeanPoint[I-1,:][:]
                 RDist = (sum(Rprime.^2))
-                dB .+= 1e-7 .*LinearAlgebra.cross(dL[I-1],(Rprime/sqrt(RDist))) ./ (RDist)
+                dB .+= 1e-7 .*LinearAlgebra.cross(dL[I-1],(Rprime/sqrt(RDist))[:]) ./ (RDist)
             end
         end
     else 
          for I in 2:L
             # Rprime = r .- PointPath[I]
             # 
-            
-            Rprime = r .- MeanPoint[I-1]
+            # MeanPoint = sum(PointPath[I-1:I,:],dims=1)[:] ./ 2
+            Rprime = r .- MeanPoint[I-1,:][:]
             RDist = (sum(Rprime.^2))
-            dB .+= 1e-7 .*LinearAlgebra.cross(dL[I-1],(Rprime/sqrt(RDist))) ./ (RDist)
+            dB .+= 1e-7 .*LinearAlgebra.cross(dL[I-1],(Rprime/sqrt(RDist))[:]) ./ (RDist)
         end
         
     end
@@ -107,20 +107,20 @@ function BiotSav(PointPath::Vector,dL,r::Vector,L::Int;MinThreshold=1e-5)
                 for I in 2:L
                     # Rprime = r .- PointPath[I]
                     # 
-                    
+                    # MeanPoint = sum(PointPath[I-1:I,:],dims=1)[:] ./ 2
                     Rprime = r .- MeanPoint[I-1]
                     RDist = (sum(Rprime.^2))
-                    dB .+= 1e-7 .*LinearAlgebra.cross(dL[I-1],(Rprime/sqrt(RDist))) ./ (RDist)
+                    dB .+= 1e-7 .*LinearAlgebra.cross(dL[I-1],(Rprime/sqrt(RDist))[:]) ./ (RDist)
                 end
             end
         else 
             for I in 2:L
                 # Rprime = r .- PointPath[I]
                 # 
-                
+                # MeanPoint = sum(PointPath[I-1:I,:],dims=1)[:] ./ 2
                 Rprime = r .- MeanPoint[I-1]
                 RDist = (sum(Rprime.^2))
-                dB .+= 1e-7 .*LinearAlgebra.cross(dL[I-1],(Rprime/sqrt(RDist))) ./ (RDist)
+                dB .+= 1e-7 .*LinearAlgebra.cross(dL[I-1],(Rprime/sqrt(RDist))[:]) ./ (RDist)
             end
             
         end
