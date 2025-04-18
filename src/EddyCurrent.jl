@@ -105,7 +105,8 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
         GMat_allFreq[:,:,ff] = GMat
         CircInputs = Complex.(zeros(2*N+N_in,1))
         CircInputs[1:N_in] = CurrentInputList[InputInds]
-        # println(CircInputs[:])
+        println(CircInputs[:])
+        println(GMat)
         CircOutputs = pinv(GMat)*CircInputs[:]
         CircOutputs_allFreq[:,ff] = CircOutputs
         CircInputs_allFreq[:,ff] = CircInputs

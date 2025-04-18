@@ -23,11 +23,12 @@ function Mutual_L_TwoLoops(PP₁,PP₂;DownSampleFac=1,
     SaveΦ₁=false
     )
 
-    TestPoints, Weights = PP_2_TestPoints_drdΘ(PP₁, MeasLayers, WireRadius;DownSampleFac=DownSampleFac)
+    TestPoints, Weights = PP_2_TestPoints_arbPlane(PP₁, MeasLayers, WireRadius;DownSampleFac=DownSampleFac)
+    Weights .+= eps(typeof(Weights[1]))
     PtsPerLayer = length(PP₁[:,1])
     NPtsPerSlice = MeasLayers * PtsPerLayer  
     SliceArea = sum(Weights) 
-        Weights = Weights / sum(Weights) * NPtsPerSlice  # normalizing
+        WeightsNorm = Weights / sum(Weights) * NPtsPerSlice  # normalizing
         if SaveΦ₁
             B_Self = zeros(length(TestPoints[:,1]), 3)
             Φ₁₁ = 0.
@@ -39,14 +40,14 @@ function Mutual_L_TwoLoops(PP₁,PP₂;DownSampleFac=1,
     for i in 1:length(TestPoints[:,1]) 
          
         if SaveΦ₁
-            B_Self[i,:] =  BiotSav(PP₁, TestPoints[i,:];MinThreshold) .* Weights[i] .* SliceArea ./ NPtsPerSlice
+            B_Self[i,:] =  BiotSav(PP₁, TestPoints[i,:];MinThreshold) .* WeightsNorm[i] .* SliceArea ./ NPtsPerSlice
             Φ₁₁ += √(sum(B_Self[i,:].^2))
-            Φ₂₁ += sum(B_Self[i,:]  .* BiotSav(PP₂, TestPoints[i,:];MinThreshold) .* Weights[i] .* SliceArea ./ NPtsPerSlice) /    √(sum(B_Self[i,:].^2))
+            Φ₂₁ += sum(B_Self[i,:]  .* BiotSav(PP₂, TestPoints[i,:];MinThreshold) .* WeightsNorm[i] .* SliceArea ./ NPtsPerSlice) /    √(sum(B_Self[i,:].^2))
         else
-            B_Self =  BiotSav(PP₁, TestPoints[i,:];MinThreshold) .* Weights[i] .* SliceArea ./ NPtsPerSlice
+            B_Self =  BiotSav(PP₁, TestPoints[i,:];MinThreshold) .* WeightsNorm[i] .* SliceArea ./ NPtsPerSlice
             Φ₁₁ += √(sum(B_Self.^2))
             
-            Φ₂₁ += sum(B_Self .* BiotSav(PP₂, TestPoints[i,:];MinThreshold) .* Weights[i] .* SliceArea ./ NPtsPerSlice) /    √(sum(B_Self.^2))
+            Φ₂₁ += sum(B_Self .* BiotSav(PP₂, TestPoints[i,:];MinThreshold) .* WeightsNorm[i] .* SliceArea ./ NPtsPerSlice) /    √(sum(B_Self.^2))
         end
         
        
@@ -62,7 +63,7 @@ function Mutual_L_TwoLoops(PP₁,PP₂;DownSampleFac=1,
         Φ₁₁ += WireInductance
     end
 
-    return Φ₂₁, Φ₁₁, B_Self
+    return Φ₂₁, Φ₁₁, B_Self,TestPoints, Weights
 
 end
 
@@ -74,7 +75,7 @@ function Mutual_L_TwoLoops(PP₁,PP₂,PriorBSelf;DownSampleFac=1,
    
     )
 
-    TestPoints, Weights = PP_2_TestPoints_drdΘ(PP₁, MeasLayers, WireRadius;DownSampleFac=DownSampleFac)
+    TestPoints, Weights = PP_2_TestPoints_arbPlane(PP₁, MeasLayers, WireRadius;DownSampleFac=DownSampleFac)
     PtsPerLayer = length(PP₁[:,1])
     NPtsPerSlice = MeasLayers * PtsPerLayer  
     SliceArea = sum(Weights) 
@@ -87,7 +88,6 @@ function Mutual_L_TwoLoops(PP₁,PP₂,PriorBSelf;DownSampleFac=1,
     dL = ([VecDist(PP₂[I-1:I,:]) for I in 2:length(PP₂[:,1])])
     # PP₂_RS = ([PP₂[I,:] for I in 1:length(PP₂[:,1])])
     L = length(dL[:,1])+1    
-
     #BiotSav(PointPath,dL,r,L) is the fast version
     for i in 1:length(TestPoints[:,1]) 
         Φ₂₁ += sum(PriorBSelf[i,:] .* BiotSav(PP₂,dL, TestPoints[i,:],L) .* Weights[i] .* SliceArea ./ NPtsPerSlice) /    √(sum(PriorBSelf[i,:].^2))
@@ -100,3 +100,36 @@ function Mutual_L_TwoLoops(PP₁,PP₂,PriorBSelf;DownSampleFac=1,
 
 end
 
+
+function Mutual_L_TwoLoops(PP₁,PP₂,PriorBSelf,TestPoints, Weights;DownSampleFac=1,
+    MeasLayers=55,# Number of concentric layers to calc field
+    MinThreshold=0.000001,
+    WireRadius=0.001,
+   
+    )
+
+    # TestPoints, Weights = PP_2_TestPoints_arbPlane(PP₁, MeasLayers, WireRadius;DownSampleFac=DownSampleFac)
+    PtsPerLayer = length(PP₁[:,1])
+    NPtsPerSlice = MeasLayers * PtsPerLayer  
+    SliceArea = sum(Weights) 
+        WeightsNorm = Weights / sum(Weights) * NPtsPerSlice  # normalizing
+    
+    Φ₂₁ = 0.
+
+
+    PP₂ = vcat(PP₂,PP₂[1,:]')
+    dL = ([VecDist(PP₂[I-1:I,:]) for I in 2:length(PP₂[:,1])])
+    # PP₂_RS = ([PP₂[I,:] for I in 1:length(PP₂[:,1])])
+    L = length(dL[:,1])+1    
+
+    #BiotSav(PointPath,dL,r,L) is the fast version
+    for i in 1:length(TestPoints[:,1]) 
+        Φ₂₁ += sum(PriorBSelf[i,:] .* BiotSav(PP₂,dL, TestPoints[i,:],L) .* WeightsNorm[i] .* SliceArea ./ NPtsPerSlice) /    √(sum(PriorBSelf[i,:].^2))
+        # Φ₂₁ += sum(PriorBSelf[i,:] .* BiotSav(PP₂, TestPoints[i,:]) .* Weights[i] .* SliceArea ./ NPtsPerSlice) /    √(sum(PriorBSelf[i,:].^2))
+    end
+
+    
+
+    return Φ₂₁
+
+end

@@ -17,16 +17,16 @@ function eval_LMat_PP_List(PP_All; DownSampleFac=1,PlotOn=false,NPtsPath=100,NLa
     PP_All, NewIndexes = SortPPByArea(PP_All;MeasLayers=NLayers,WireRad = WireRadius)
     println("Sorted")
 
-    Mut, Self, SavedBSelfArr = Mutual_L_TwoLoops(PP_All[end], PP_All[1];DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius,IncludeWireInduct=false,SaveΦ₁=true)
+    Mut, Self, SavedBSelfArr,TestPoints, Weights = Mutual_L_TwoLoops(PP_All[end], PP_All[1];DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius,IncludeWireInduct=false,SaveΦ₁=true)
 
 
     LMat[end,end] = Self
 
     for j in 1:N, k in (j+1):N
         if k==(j+1)
-            Mut, Self, SavedBSelfArr = Mutual_L_TwoLoops(PP_All[j], PP_All[k];DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius,IncludeWireInduct=false,SaveΦ₁=true)
+            Mut, Self, SavedBSelfArr,TestPoints, Weights= Mutual_L_TwoLoops(PP_All[j], PP_All[k];DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius,IncludeWireInduct=false,SaveΦ₁=true)
         else
-            Mut = Mutual_L_TwoLoops(PP_All[j], PP_All[k], SavedBSelfArr;DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius)
+            Mut = Mutual_L_TwoLoops(PP_All[j], PP_All[k], SavedBSelfArr,TestPoints, Weights;DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius)
         end
         println(j)
 
@@ -43,7 +43,7 @@ end
 
 function getPPArea(PP;MeasLayers=55,WireRad = 0.2e-3)
 
-    TestPoints, Weights = Biot.PP_2_TestPoints_drdΘ(PP, MeasLayers, WireRad)
+    TestPoints, Weights = Biot.PP_2_TestPoints_arbPlane(PP, MeasLayers)
     SliceArea = sum(Weights)
     return SliceArea 
 end

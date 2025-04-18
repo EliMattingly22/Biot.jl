@@ -580,3 +580,95 @@ function Cart2Polar(Arr)
 
     return PolarArr
 end
+
+
+function PP_2_TestPoints_arbPlane(PP, Layers=10, WireRadius=0.001; DownSampleFac::Int=1)
+    
+    PP = PP[1:DownSampleFac:end,:]
+    PP_Mean = [sum(PP[:,i]) / length(PP[:,i]) for i in 1:3]
+    PP_Cent = hcat([PP[:,1] .- PP_Mean[1] , PP[:,2] .- PP_Mean[2], PP[:,3] .- PP_Mean[3]]...)
+
+    TestPoints_Cent = vcat([PP_Cent .* √(NLayer / (Layers + 1))  for NLayer in 1:Layers]...)
+    TestPoints_Cent = reverse(TestPoints_Cent;dims=1)
+    MaxDist = maximum(sqrt.(sum(PP_Cent.^2;dims=2)))
+    TestPoints_Cent = vcat(reverse(PP_Cent .* ((MaxDist - WireRadius) / MaxDist);dims=1), TestPoints_Cent)
+    Layers = Layers + 1 # Because adding an additional layer near wire
+    TotPts = length(TestPoints_Cent[:,1])
+    OuterLayerInds = 1:length(PP[:,1])
+
+    TestPoints = hcat([TestPoints_Cent[:,1] .+ PP_Mean[1] , TestPoints_Cent[:,2] .+ PP_Mean[2], TestPoints_Cent[:,3] .+ PP_Mean[3]]...)
+
+    total_area, Weights = effective_area(TestPoints,OuterLayerInds)
+
+    return TestPoints,Weights
+
+
+end
+
+
+"""
+    effective_area(points::Matrix{Float64}, boundary_indices::Vector{Int}) -> (total_area, effective_areas)
+
+Computes the total enclosed area from the given outer boundary points and distributes it among all points 
+proportionally based on inverse distance weighting.
+- `points`: Nx3 matrix where each row is (x, y, z).
+- `boundary_indices`: Vector specifying indices of points forming the outer boundary in order.
+
+Returns:
+- `total_area`: The enclosed area of the boundary.
+- `effective_areas`: Vector of effective area contributions for each point.
+"""
+function effective_area(points::Matrix{Float64}, boundary_indices::Union{Vector{Int},UnitRange{Int}})
+    if size(points, 2) != 3
+        error("Input matrix must have three columns (x, y, z).")
+    end
+
+    # Extract boundary points
+    boundary_points = points[boundary_indices, :]
+
+    # Compute normal using cross product of two edges
+    v1 = boundary_points[2, :] - boundary_points[1, :]
+    v2 = boundary_points[3, :] - boundary_points[1, :]
+    normal = cross(v1, v2)  # Ensure unit normal
+    secInd=3
+    while sum(normal.==0)>2
+        secInd+=1
+        if secInd==length(boundary_points[:,1])
+            error("points are coplanar")
+            break
+        end
+        
+        v2 = boundary_points[secInd, :] .- boundary_points[1, :]
+        normal = cross(v1, v2)
+    end
+    # Create an orthonormal basis (u, v) for the plane
+    u = normalize(v1)  # First basis vector
+    v = normalize(cross(normal, u))  # Second basis vector perpendicular to u and normal
+
+    # Project boundary points onto this local (u, v) coordinate system
+    function project_to_plane(p)
+        return [dot(p - boundary_points[1, :], u), dot(p - boundary_points[1, :], v)]
+    end
+    projected_boundary = hcat([project_to_plane(boundary_points[i, :]) for i in 1:length(boundary_indices)]...)'
+
+    # Compute the enclosed area using the shoelace formula
+    x = projected_boundary[:, 1]
+    y = projected_boundary[:, 2]
+    n = length(x)
+    total_area = 0.5 * abs(sum(x[i] * y[i+1] - x[i+1] * y[i] for i in 1:n-1) + (x[n] * y[1] - x[1] * y[n]))
+
+    # Compute inverse distance weight for all points
+    num_points = size(points, 1)
+    distances = zeros(num_points)
+    for i in 1:num_points
+        distances[i] = sum(1.0 / norm(points[i, :] - points[j, :]) for j in 1:num_points if i != j)
+    end
+
+    # Normalize distances to create weights
+    weights = distances ./ sum(distances)
+
+    # Assign effective area based on weights
+    effective_areas = total_area .* weights
+
+    return total_area, effective_areas
+end
