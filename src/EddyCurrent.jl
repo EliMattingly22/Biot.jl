@@ -24,17 +24,37 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
 
     LMat[end,end] = Self
 
-    for j in 1:N, k in (j+1):N
-        if k==(j+1)
-            Mut, Self, SavedBSelfArr = Mutual_L_TwoLoops(PP_All[j], PP_All[k];DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius,IncludeWireInduct=true,SaveΦ₁=true)
-        else
-            Mut = Mutual_L_TwoLoops(PP_All[j], PP_All[k], SavedBSelfArr;DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius)
-        end
-        println(j)
+    start_time = time()  # Record the start time of the loop
+    total_iterations = N * (N - 1) / 2  # Total number of iterations
+    completed_iterations = 0  # Counter for completed iterations
 
-        LMat[j,j] = Self
-        LMat[j,k] = Mut
-        LMat[k,j] = Mut
+    for j in 1:N, k in (j+1):N
+        completed_iterations += 1
+        if k == (j+1)
+            println("Calculating Mutual Inductance between loop ", j, " and loop ", k, " (", completed_iterations, "/", total_iterations, ")")
+            
+            # Increment completed iterations
+            
+            
+            # Calculate elapsed time and estimate remaining time
+            elapsed_time = time() - start_time  # Time in seconds
+            avg_time_per_iteration = elapsed_time / completed_iterations
+            remaining_time = avg_time_per_iteration * (total_iterations - completed_iterations)
+            
+            # Convert remaining time to minutes and seconds
+            remaining_minutes = Int(floor(remaining_time / 60))
+            remaining_seconds = Int(round(remaining_time % 60))
+            
+            println("Estimated time remaining: ", remaining_minutes, " minutes and ", remaining_seconds, " seconds")
+            
+            Mut, Self, SavedBSelfArr = Mutual_L_TwoLoops(PP_All[j], PP_All[k]; DownSampleFac=DownSampleFac, MeasLayers=NLayers, MinThreshold=1e-10, WireRadius=WireRadius, IncludeWireInduct=true, SaveΦ₁=true)
+        else
+            Mut = Mutual_L_TwoLoops(PP_All[j], PP_All[k], SavedBSelfArr; DownSampleFac=DownSampleFac, MeasLayers=NLayers, MinThreshold=1e-10, WireRadius=WireRadius)
+        end
+        
+        LMat[j, j] = Self
+        LMat[j, k] = Mut
+        LMat[k, j] = Mut
     end
 
 
@@ -89,8 +109,8 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
         GMat = Complex.(zeros(2*N+N_in,2*N+N_in))
         GMat[1+N_in:N+N_in,1+N_in:N+N_in] = WireConductance
         GMat[(N_in+N+1):end,(N_in+N+1:end)] = -1 .* LMat .* 2 .*pi .* freq .* 1im
-        GMat[1+N_in:N+N_in,N+1+N_in:end] =-1 .* eye#### Changed sign -June 6
-        GMat[N+N_in+1:end,1+N_in:N+N_in] =-1 .* eye #### Changed sign -June 6
+        GMat[1+N_in:N+N_in,N+1+N_in:end] =-1 .* eye
+        GMat[N+N_in+1:end,1+N_in:N+N_in] =-1 .* eye
         for kk in 1:N_in
             I = Int(InputInds[kk]) #Current loop index
 
@@ -105,8 +125,8 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
         GMat_allFreq[:,:,ff] = GMat
         CircInputs = Complex.(zeros(2*N+N_in,1))
         CircInputs[1:N_in] = CurrentInputList[InputInds]
-        println(CircInputs[:])
-        println(GMat)
+        # println(CircInputs[:])
+        # println(GMat)
         CircOutputs = pinv(GMat)*CircInputs[:]
         CircOutputs_allFreq[:,ff] = CircOutputs
         CircInputs_allFreq[:,ff] = CircInputs
@@ -126,7 +146,7 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
             L = length(PP_RS[:,1])    
             for i in 1:length(TestPoints[:,1]) 
             minDist = minimum(sqrt.(sum((Wires .- repeat(transpose(TestPoints[i,:]),length(Wires[:,1]),1)).^2,dims=2)))
-                if minDist>= (5*WireRadius)
+                if minDist>= (0.5*WireRadius)
                     Φ[i,:,ff] .+=   (BiotSav(PP_RS,dL, TestPoints[i,:],L) .* CircOutputs[N_in+N+jj])[:] 
                 else
                     println("Point too close to a wire")

@@ -21,14 +21,31 @@ function eval_LMat_PP_List(PP_All; DownSampleFac=1,PlotOn=false,NPtsPath=100,NLa
 
 
     LMat[end,end] = Self
+    
+    start_time = time()  # Record the start time of the loop
+    total_iterations = N * (N - 1) / 2  # Total number of iterations
+    completed_iterations = 0  # Counter for completed iterations
 
     for j in 1:N, k in (j+1):N
+        completed_iterations += 1
         if k==(j+1)
+            # Calculate elapsed time and estimate remaining time
+            elapsed_time = time() - start_time  # Time in seconds
+            avg_time_per_iteration = elapsed_time / completed_iterations
+            remaining_time = avg_time_per_iteration * (total_iterations - completed_iterations)
+            
+            # Convert remaining time to minutes and seconds
+            remaining_minutes = Int(floor(remaining_time / 60))
+            remaining_seconds = Int(round(remaining_time % 60))
+            
+            println("Estimated time remaining: ", remaining_minutes, " minutes and ", remaining_seconds, " seconds")
+
             Mut, Self, SavedBSelfArr,TestPoints, Weights= Mutual_L_TwoLoops(PP_All[j], PP_All[k];DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius,IncludeWireInduct=false,SaveΦ₁=true)
         else
             Mut = Mutual_L_TwoLoops(PP_All[j], PP_All[k], SavedBSelfArr,TestPoints, Weights;DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius)
         end
-        println(j)
+        # println(j)
+        
 
         LMat[j,j] = Self
         LMat[j,k] = Mut

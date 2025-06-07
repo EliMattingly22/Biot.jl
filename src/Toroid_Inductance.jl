@@ -49,12 +49,12 @@ function eval_Induct_DToroid(IRad, ORad, N::Int;DownSampleFac=1,PlotOn=false,NPt
             scatter3D(NewPP[:,1], NewPP[:,2], NewPP[:,3])
         end
         Mut = Mutual_L_TwoLoops(PointPath_SingleLoop, NewPP, SavedBSelfArr;DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius)
-        println(Mut)
+        # println(Mut)
         
         LMat .+= Mut .* OffDiagOnes(N, i + 1)
         LMat .+= Mut .* OffDiagOnes(N, N - (i - 1))
         
-        println(i)
+        # println(i)
     end
     LMat[N,N] = LMat[1,1]
     return LMat, sum(LMat)
@@ -99,11 +99,11 @@ function eval_Induct_CircToroid(IRad,ORad,N::Int;DownSampleFac=1,
             scatter3D(NewPP[:,1], NewPP[:,2], NewPP[:,3])
         end
         Mut, Self = Mutual_L_TwoLoops(PointPath_SingleLoop, NewPP;DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius,IncludeWireInduct=true)
-        println(Mut)
+        # println(Mut)
         LMat[i,i] = Self
         LMat .+= Mut .* OffDiagOnes(N, i + 1)
         
-        println(i)
+        # println(i)
     end
     LMat[N,N] = LMat[1,1]
     return LMat, sum(LMat)
@@ -139,7 +139,7 @@ function eval_Induct_DToroidTransformer(IRad, ORad, N₁::Int, N₂::Int;DownSam
     
     NIndexingArray = hcat(vcat(N₁List, N₂List), vcat(ones(length(N₁List), 1), zeros(length(N₂List), 1)))
     NIndexingArray = sortslices(NIndexingArray;dims=1) # This creates an array that will allow for determining which turn is associated with primary or secondary
-    println(NIndexingArray)
+    # println(NIndexingArray)
     ΘperTurn = 360 / N
     
     PointPath_SingleLoop =  DCore_PointPath(IRad, ORad;NPts=NPtsPath)
@@ -557,7 +557,7 @@ function PP_2_TestPoints(PP, Layers=10;  DownSampleFac::Int=1,WireRadius=nothing
     TestPoints_Cent = vcat([PP_Cent .* (NLayer / (Layers + 1))  for NLayer in 1:Layers]...)
 
     if ~(WireRadius === nothing)
-        println("Adding inner test layer")
+        # println("Adding inner test layer")
         MaxDist = maximum(sqrt.(sum(PP_Cent.^2;dims=2)))
         TestPoints_Cent = vcat(TestPoints_Cent, PP_Cent .* ((MaxDist - WireRadius) / MaxDist))
 

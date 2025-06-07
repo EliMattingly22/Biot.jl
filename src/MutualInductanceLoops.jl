@@ -58,7 +58,7 @@ function Mutual_L_TwoLoops(PP₁,PP₂;DownSampleFac=1,
         for i in 1:(length(PP₁[:,1]) - 1)
             CumulativeDist += sqrt(sum((PP₁[i,:] .- PP₁[i + 1,:]).^2))
         end
-        println(CumulativeDist)
+        # println(CumulativeDist)
         WireInductance = internalInductance(CumulativeDist)
         Φ₁₁ += WireInductance
     end
