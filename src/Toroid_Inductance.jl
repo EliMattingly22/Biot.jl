@@ -1,4 +1,3 @@
-
 # BiotSav(PointPath,r;Current=1,MinThreshold = 0.01)
 # DCore_PointPath(r₁, r₂; dr = (r₂-r₁)/100)
 # MakeEllip(r₁,r₂;Center = [0,0,0],NPts=100)
@@ -605,6 +604,29 @@ function PP_2_TestPoints_arbPlane(PP, Layers=10, WireRadius=0.001; DownSampleFac
 
 end
 
+function PP_2_TestPoints_arbPlane_centroid(PP, Layers=10, WireRadius=0.001; DownSampleFac::Int=1)
+    
+    PP = PP[1:DownSampleFac:end,:]
+    PP_Mean = [sum(PP[:,i]) / length(PP[:,i]) for i in 1:3]
+    PP_Cent = hcat([PP[:,1] .- PP_Mean[1] , PP[:,2] .- PP_Mean[2], PP[:,3] .- PP_Mean[3]]...)
+
+    TestPoints_Cent = vcat([PP_Cent .* √(NLayer / (Layers + 1))  for NLayer in 1:Layers]...)
+    TestPoints_Cent = reverse(TestPoints_Cent;dims=1)
+    MaxDist = maximum(sqrt.(sum(PP_Cent.^2;dims=2)))
+    TestPoints_Cent = vcat(reverse(PP_Cent .* ((MaxDist - WireRadius) / MaxDist);dims=1), TestPoints_Cent)
+    Layers = Layers + 1 # Because adding an additional layer near wire
+    TotPts = length(TestPoints_Cent[:,1])
+    OuterLayerInds = 1:length(PP[:,1])
+
+    TestPoints = hcat([TestPoints_Cent[:,1] .+ PP_Mean[1] , TestPoints_Cent[:,2] .+ PP_Mean[2], TestPoints_Cent[:,3] .+ PP_Mean[3]]...)
+
+    total_area, Weights = effective_area(PP,OuterLayerInds)
+
+    return hcat(PP_Mean...),[total_area]
+
+
+end
+
 
 """
     effective_area(points::Matrix{Float64}, boundary_indices::Vector{Int}) -> (total_area, effective_areas)
@@ -629,22 +651,30 @@ function effective_area(points::Matrix{Float64}, boundary_indices::Union{Vector{
     # Compute normal using cross product of two edges
     v1 = boundary_points[2, :] - boundary_points[1, :]
     v2 = boundary_points[3, :] - boundary_points[1, :]
-    normal = cross(v1, v2)  # Ensure unit normal
-    secInd=3
-    while sum(normal.==0)>2
-        secInd+=1
-        if secInd==length(boundary_points[:,1])
-            error("points are coplanar")
-            break
+    normal = cross(v1, v2)
+    # Define a threshold for collinearity (5% of the magnitude of v1)
+    threshold = 0.001 * norm(v1)
+
+    # Check if the points are collinear
+    if norm(normal) < threshold
+        secInd = 3
+        while norm(normal) < threshold
+            secInd += 1
+            if secInd > length(boundary_points[:, 1])
+                error("Boundary points are collinear or insufficient to define a plane.")
+            end
+            v2 = boundary_points[secInd, :] - boundary_points[1, :]
+            normal = cross(v1, v2)
         end
-        
-        v2 = boundary_points[secInd, :] .- boundary_points[1, :]
-        normal = cross(v1, v2)
     end
+
+    # Normalize the normal vector
+    normal = normalize(normal)
+    
     # Create an orthonormal basis (u, v) for the plane
     u = normalize(v1)  # First basis vector
     v = normalize(cross(normal, u))  # Second basis vector perpendicular to u and normal
-
+    # println("Normal vector: $normal, u: $u, v: $v")
     # Project boundary points onto this local (u, v) coordinate system
     function project_to_plane(p)
         return [dot(p - boundary_points[1, :], u), dot(p - boundary_points[1, :], v)]
@@ -654,9 +684,11 @@ function effective_area(points::Matrix{Float64}, boundary_indices::Union{Vector{
     # Compute the enclosed area using the shoelace formula
     x = projected_boundary[:, 1]
     y = projected_boundary[:, 2]
+    # display(plot(x,y))
     n = length(x)
+    # total_area = 0.5 * abs(sum(x[i] * y[i+1] - x[i+1] * y[i] for i in 1:n-1) + (x[n] * y[1] - x[1] * y[n]))
     total_area = 0.5 * abs(sum(x[i] * y[i+1] - x[i+1] * y[i] for i in 1:n-1) + (x[n] * y[1] - x[1] * y[n]))
-
+    # println("Total enclosed area: $total_area")
     # Compute inverse distance weight for all points
     num_points = size(points, 1)
     distances = zeros(num_points)

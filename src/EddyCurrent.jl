@@ -9,7 +9,7 @@ The function evaluates the equivalent circuit (eddy currents, voltages, etc) in 
     Outputs: LMat, GMat_allFreq, CircOutputs_allFreq, CircInputs_allFreq, CircOutput_Key,RxInds,Φ
 """
 function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 0],OpenTurns = zeros(length(PP_All)); DownSampleFac=1,PlotOn=false,NPtsPath=100,NLayers=20,WireRadius=0.001,Quasistatic=true,NodeNodeCap = 1e-15)
-    ρ_Cu = 1.72e-8
+    ρ_Cu = 1.72e-8 
     WireArea = pi*WireRadius^2
     N = length(PP_All)
     LMat = zeros(N, N)
@@ -19,7 +19,7 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
     CurrentInputList = CurrentInputList[:]
 
 
-    Mut, Self, SavedBSelfArr = Mutual_L_TwoLoops(PP_All[end], PP_All[1];DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius,IncludeWireInduct=true,SaveΦ₁=true)
+    Mut, Self, SavedBSelfArr = Mutual_L_TwoLoops(PP_All[end], PP_All[1];DownSampleFac=DownSampleFac,MeasLayers=NLayers,MinThreshold=1e-10,WireRadius=WireRadius,IncludeWireInduct=false,SaveΦ₁=true)
 
 
     LMat[end,end] = Self
@@ -47,7 +47,7 @@ function eval_EddyCurrent_PP_List(PP_All, CurrentInputList,f ,TestPoints = [0 0 
             
             println("Estimated time remaining: ", remaining_minutes, " minutes and ", remaining_seconds, " seconds")
             
-            Mut, Self, SavedBSelfArr = Mutual_L_TwoLoops(PP_All[j], PP_All[k]; DownSampleFac=DownSampleFac, MeasLayers=NLayers, MinThreshold=1e-10, WireRadius=WireRadius, IncludeWireInduct=true, SaveΦ₁=true)
+            Mut, Self, SavedBSelfArr = Mutual_L_TwoLoops(PP_All[j], PP_All[k]; DownSampleFac=DownSampleFac, MeasLayers=NLayers, MinThreshold=1e-10, WireRadius=WireRadius, IncludeWireInduct=false, SaveΦ₁=true)
         else
             Mut = Mutual_L_TwoLoops(PP_All[j], PP_All[k], SavedBSelfArr; DownSampleFac=DownSampleFac, MeasLayers=NLayers, MinThreshold=1e-10, WireRadius=WireRadius)
         end
